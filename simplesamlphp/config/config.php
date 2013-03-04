@@ -44,10 +44,10 @@ $config = array (
 	 * Note: The messages are logged with the DEBUG log level, so you also need to set
 	 * the 'logging.level' option to LOG_DEBUG.
 	 */
-	'debug' => FALSE,
+	'debug' => TRUE,
 
 
-	'showerrors'            =>	TRUE,
+	'showerrors' =>	TRUE,
 
 	/**
 	 * Custom error show function called from SimpleSAML_Error_Error::show.
@@ -69,7 +69,7 @@ $config = array (
 	 * metadata listing and diagnostics pages.
 	 * You can also put a hash here; run "bin/pwgen.php" to generate one.
 	 */
-	'auth.adminpassword'		=> '123',
+	'auth.adminpassword'		=> 'iamnotadmin',
 	'admin.protectindexpage'	=> false,
 	'admin.protectmetadata'		=> false,
 
@@ -81,7 +81,7 @@ $config = array (
 	 * A possible way to generate a random salt is by running the following command from a unix shell:
 	 * tr -c -d '0123456789abcdefghijklmnopqrstuvwxyz' </dev/urandom | dd bs=32 count=1 2>/dev/null;echo
 	 */
-	'secretsalt' => 'defaultsecretsalt',
+	'secretsalt' => 'pdnaxsxpz4yuhl4vyp4v8n7s1xu8bb0w',
 	
 	/*
 	 * Some information about the technical persons running this installation.
@@ -89,7 +89,7 @@ $config = array (
 	 * also as the technical contact in generated metadata.
 	 */
 	'technicalcontact_name'     => 'Administrator',
-	'technicalcontact_email'    => 'na@example.org',
+	'technicalcontact_email'    => 'wouter.adem@gmail.com',
 
 	/*
 	 * The timezone of the server. This option should be set to the timezone you want
@@ -98,7 +98,7 @@ $config = array (
 	 *
 	 * See this page for a list of valid timezones: http://php.net/manual/en/timezones.php
 	 */
-	'timezone' => NULL,
+	'timezone' => 'Europe/Brussels',
 
 	/*
 	 * Logging.
@@ -505,7 +505,7 @@ $config = array (
 	 *
 	 * (This option replaces the old 'session.handler'-option.)
 	 */
-	'store.type' => 'phpsession',
+	'store.type' => 'sql',
 
 
 	/*
@@ -514,13 +514,13 @@ $config = array (
 	 * See http://www.php.net/manual/en/pdo.drivers.php for the various
 	 * syntaxes.
 	 */
-	'store.sql.dsn' => 'sqlite:/path/to/sqlitedatabase.sq3',
+	'store.sql.dsn' => 'mysql:host=free-2030;dbname=wouteradem',
 
 	/*
 	 * The username and password to use when connecting to the database.
 	 */
-	'store.sql.username' => NULL,
-	'store.sql.password' => NULL,
+	'store.sql.username' => 'wouterademdev',
+	'store.sql.password' => 'p6DtrKwLTuuL7bV',
 
 	/*
 	 * The prefix we should use on our tables.
@@ -636,3 +636,52 @@ $config = array (
 	'proxy' => NULL,
 
 );
+
+// MODIFY AS NEEDED.
+// Defines account specific settings.
+if (!defined('AH_ACCOUNT_NAME')) {
+  define('AH_ACCOUNT_NAME', 'wouterademdev');
+  define('AH_DATABASE_NAME', 'wouterademd');
+}
+
+// Prevent Varnish from interfering with SimpleSAMLphp.
+setcookie('NO_CACHE', '1');
+
+// Non-Acquia environments are set to "local".
+if (empty($_ENV['AH_SITE_ENVIRONMENT'])) {
+  $_ENV['AH_SITE_ENVIRONMENT'] = 'local';
+}
+
+// The library gets creds for the current environment dynamically.
+if ($_ENV['AH_SITE_ENVIRONMENT'] != 'local') {
+
+  // Loads our unofficial cloud library.
+  $root_dir = dirname(dirname(dirname(__FILE__)));
+  $acquia_lib = $root_dir . '/acquia-utils/Acquia-Cloud-Utilities';
+  require_once $acquia_lib . '/library/Acquia/Loader.php';
+  Acquia_Loader::register();
+
+  // Establishes connection to database.
+  $acquia = new Acquia_Cloud(AH_ACCOUNT_NAME);
+  $creds = $acquia->getActiveDatabaseCredentials(AH_DATABASE_NAME);
+  $config['store.type'] = 'sql';
+  $config['store.sql.dsn'] = sprintf('mysql:host=%s;port=%s;dbname=%s', $creds['host'], $creds['port'], $creds['db']);
+  $config['store.sql.username'] = $creds['user'];
+  $config['store.sql.password'] = $creds['pass'];
+  $config['store.sql.prefix'] = 'simplesaml';
+}
+else {
+  // MODIFY AS NEEDED.
+  // Defines credentials for non-Acquia environments.
+  $config['store.type'] = 'sql';
+  $config['store.sql.dsn'] = 'mysql:host=localhost;port=8889;dbname=demosso';
+  $config['store.sql.username'] = 'demosso';
+  $config['store.sql.password'] = 'wa198010';
+  $config['store.sql.prefix'] = 'simplesaml';
+}
+
+// SSL is handled on the balancer
+if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') {
+  $_SERVER['HTTPS'] = 'on';
+  $_SERVER['SERVER_PORT'] = 443;
+}
